@@ -1,7 +1,9 @@
 package serializer
 
-import "github.com/CanalTP/gonavitia"
-import "github.com/CanalTP/gonavitia/pbnavitia"
+import (
+	"github.com/CanalTP/gonavitia"
+	"github.com/CanalTP/gonavitia/pbnavitia"
+)
 
 func (s *Serializer) NewGeoJson(pb *pbnavitia.Section) *gonavitia.GeoJson {
 	if pb == nil {

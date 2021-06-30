@@ -12,11 +12,10 @@ import (
 
 	"database/sql"
 
-	_ "net/http/pprof"
-
 	"github.com/CanalTP/gormungandr"
 	"github.com/CanalTP/gormungandr/auth"
 	"github.com/CanalTP/gormungandr/internal/schedules"
+	"github.com/CanalTP/gormungandr/internal/utils"
 	"github.com/CanalTP/gormungandr/kraken"
 	cache "github.com/patrickmn/go-cache"
 	"github.com/rafaeljesus/rabbus"
@@ -112,7 +111,6 @@ func main() {
 	})
 	logger.Info("starting schedules")
 
-	kraken := kraken.NewKrakenZMQ("default", config.Kraken, config.Timeout)
 	authOption := schedules.SkipAuth()
 	var statPublisher *auth.StatPublisher
 
@@ -174,7 +172,24 @@ func main() {
 	}
 
 	router := setupRouter(config)
-	schedules.SetupApi(router, kraken, statPublisher, authOption)
+	if len(config.KrakenFilesUriStr) > 0 {
+		coverages, err := utils.GetFileWithFS(config.KrakenFilesUri)
+		if err != nil {
+			logger.Fatalf("No coverages: %+v", err)
+		}
+		krakens := make(map[string]kraken.Kraken)
+		for _, coverage := range coverages {
+			kraken := kraken.NewKrakenZMQ(coverage.Key, coverage.ZmqSocket, config.Timeout)
+			krakens[coverage.Key] = kraken
+		}
+		schedules.SetupApiMultiCoverage(router, krakens, statPublisher, authOption)
+	} else if len(config.Kraken) > 0 {
+		kraken := kraken.NewKrakenZMQ("default", config.Kraken, config.Timeout)
+		schedules.SetupApi(router, kraken, statPublisher, authOption)
+	} else {
+		logger.Fatalf("No coverage defined")
+		os.Exit(1)
+	}
 
 	srv := &http.Server{
 		Addr:    config.Listen,

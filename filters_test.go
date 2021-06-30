@@ -1,7 +1,10 @@
 package gormungandr
 
-import "testing"
-import "github.com/stretchr/testify/assert"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestParseProtect(t *testing.T) {
 	assert.Equal(t, "\"\"", protect(""))

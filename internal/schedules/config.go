@@ -1,9 +1,11 @@
 package schedules
 
 import (
+	"net/url"
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
@@ -12,6 +14,7 @@ func init() {
 	pflag.String("listen", ":8080", "[IP]:PORT to listen")
 	pflag.Duration("timeout", time.Second, "timeout for call to kraken")
 	pflag.String("kraken", "tcp://localhost:3000", "zmq addr for kraken")
+	pflag.String("kraken-files-uri", "", "format: [scheme:][//[userinfo@]host][/]path")
 	pflag.String("pprof-listen", "", "address to listen for pprof. format: \"IP:PORT\"")
 	pflag.Lookup("pprof-listen").NoOptDefVal = "localhost:6060"
 	pflag.Bool("json-log", false, "enable json logging")
@@ -35,6 +38,8 @@ type Config struct { //nolint:maligned
 	Listen                  string
 	Timeout                 time.Duration
 	Kraken                  string
+	KrakenFilesUriStr       string `mapstructure:"kraken-files-uri"`
+	KrakenFilesUri          url.URL
 	PprofListen             string        `mapstructure:"pprof-listen"`
 	JSONLog                 bool          `mapstructure:"json-log"`
 	LogLevel                string        `mapstructure:"log-level"`
@@ -60,5 +65,12 @@ func GetConfig() (Config, error) {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	err = viper.Unmarshal(&config)
+
+	if url, err := url.Parse(config.KrakenFilesUriStr); err != nil {
+		logrus.Errorf("Unable to parse data url: %s", config.KrakenFilesUriStr)
+	} else {
+		config.KrakenFilesUri = *url
+	}
+
 	return config, err
 }

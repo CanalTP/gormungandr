@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NoRouteHandler(kraken kraken.Kraken, publisher Publisher) gin.HandlerFunc {
+func NoRouteHandler(kraken kraken.Kraken, coverageName string, publisher Publisher) gin.HandlerFunc {
 	fn := func(c *gin.Context) {
 		request := gormungandr.NewRequest()
 		c.Header("navitia-request-id", request.ID.String())
@@ -21,6 +21,9 @@ func NoRouteHandler(kraken kraken.Kraken, publisher Publisher) gin.HandlerFunc {
 			request.User = user
 		}
 		request.Coverage = c.Param("coverage")
+		if len(coverageName) > 0 {
+			c.Keys["coverage"] = coverageName
+		}
 
 		if filter.API == "route_schedules" {
 			request := NewRouteScheduleRequest(request)

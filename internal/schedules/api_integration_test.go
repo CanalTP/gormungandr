@@ -170,3 +170,48 @@ func TestRouteSchedulesDisruptions(t *testing.T) {
 	require.Len(response.RouteSchedules, 2)
 	//TODO add more tests when handling disruptions
 }
+
+func TestMultiCoverage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test Docker in short mode.")
+	}
+	t.Parallel()
+	assert := assert.New(t)
+	require := require.New(t)
+	c, engine := gin.CreateTestContext(httptest.NewRecorder())
+	krakens := map[string]kraken.Kraken{"cov1": departureBoardTest, "cov2": mainRoutingTest}
+	SetupApiMultiCoverage(engine, krakens, &NullPublisher{}, SkipAuth())
+
+	//time.Sleep(10 * time.Second)
+
+	c.Request = httptest.NewRequest("GET", "http://api.navitia.io/v1/coverage/cov1/routes/line:A:0/route_schedules?from_datetime=20120615T080000", nil)
+	w := httptest.NewRecorder()
+	engine.ServeHTTP(w, c.Request)
+	require.Equal(200, w.Code)
+
+	var response gonavitia.RouteScheduleResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.Nil(err)
+
+	require.Len(response.RouteSchedules, 1)
+	require.NotNil(response.Context)
+
+	c.Request = httptest.NewRequest("GET", "/v1/coverage/cov2/routes/A:0/route_schedules?from_datetime=20120615T000000", nil)
+	w = httptest.NewRecorder()
+	engine.ServeHTTP(w, c.Request)
+	require.Equal(200, w.Code)
+
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.Nil(err)
+	assert.Nil(response.Error)
+
+	require.Len(response.RouteSchedules, 1)
+	schedule := response.RouteSchedules[0]
+	checker.IsValidRouteSchedule(t, schedule)
+	require.Len(schedule.Table.Headers, 1)
+	require.NotNil(schedule.Table.Headers[0].DisplayInfo)
+	displayInfo := schedule.Table.Headers[0].DisplayInfo
+	require.NotNil(displayInfo.Headsign)
+	assert.Equal("vjA", *displayInfo.Headsign)
+	assert.ElementsMatch([]string{"A00", "vjA"}, displayInfo.Headsigns)
+}

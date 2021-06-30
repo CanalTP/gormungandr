@@ -3,6 +3,7 @@ package gormungandr
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -24,7 +25,7 @@ var (
 		Help:      "http request latency distributions.",
 		Buckets:   prometheus.ExponentialBuckets(0.001, 1.5, 25),
 	},
-		[]string{"handler", "code"},
+		[]string{"handler", "code", "coverage"},
 	)
 
 	httpInFlight = prometheus.NewGauge(prometheus.GaugeOpts{
@@ -58,7 +59,11 @@ func InstrumentGin() gin.HandlerFunc {
 		httpInFlight.Inc()
 		c.Next()
 		httpInFlight.Dec()
-		observer := httpDurations.With(prometheus.Labels{"handler": c.HandlerName(), "code": strconv.Itoa(c.Writer.Status())})
+		//logrus.Warning(c.Request.RequestURI)
+		observer := httpDurations.With(prometheus.Labels{
+			"handler":  c.HandlerName(),
+			"code":     strconv.Itoa(c.Writer.Status()),
+			"coverage": fmt.Sprintf("%s", c.Keys["coverage"])})
 		observer.Observe(time.Since(begin).Seconds())
 	}
 }

@@ -1,6 +1,8 @@
 package schedules
 
 import (
+	"fmt"
+
 	"github.com/CanalTP/gonavitia"
 	"github.com/CanalTP/gormungandr/kraken"
 	"github.com/gin-contrib/location"
@@ -37,5 +39,19 @@ func SetupApi(router *gin.Engine, kraken kraken.Kraken, statPublisher Publisher,
 
 	cov := router.Group("/v1/coverage/:coverage")
 	auth(cov)
-	cov.GET("/*filter", NoRouteHandler(kraken, statPublisher))
+	cov.GET("/*filter", NoRouteHandler(kraken, "", statPublisher))
+}
+
+func SetupApiMultiCoverage(router *gin.Engine, krakens map[string]kraken.Kraken, statPublisher Publisher, auth AuthOption) {
+	// middleware must be define before handlers
+	router.Use(location.New(location.Config{
+		Scheme: "http",
+		Host:   "navitia.io",
+	}))
+
+	for coverageName, kraken := range krakens {
+		cov := router.Group(fmt.Sprintf("/v1/coverage/%s", coverageName))
+		auth(cov)
+		cov.GET("/*filter", NoRouteHandler(kraken, coverageName, statPublisher))
+	}
 }

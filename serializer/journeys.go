@@ -1,9 +1,12 @@
 package serializer
 
-import "github.com/CanalTP/gonavitia"
-import "github.com/CanalTP/gonavitia/pbnavitia"
-import "strings"
-import "github.com/golang/protobuf/proto"
+import (
+	"strings"
+
+	"github.com/CanalTP/gonavitia"
+	"github.com/CanalTP/gonavitia/pbnavitia"
+	"github.com/golang/protobuf/proto"
+)
 
 func (s *Serializer) NewJourneysReponse(pb *pbnavitia.Response) *gonavitia.JourneysResponse {
 	if pb == nil {
